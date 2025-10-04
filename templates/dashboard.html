@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Juan Gastos Dashboard</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background: white; border-radius: 20px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }
+        .header { background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; padding: 30px; text-align: center; }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        .header p { opacity: 0.9; font-size: 1.1rem; }
+        .content { padding: 30px; }
+        .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px; }
+        .stat-card { background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%); padding: 25px; border-radius: 15px; text-align: center; border: 1px solid #e9ecef; transition: transform 0.3s ease; }
+        .stat-card:hover { transform: translateY(-5px); }
+        .stat-value { font-size: 2rem; font-weight: bold; color: #2c3e50; margin-bottom: 8px; }
+        .stat-label { color: #6c757d; font-weight: 500; text-transform: uppercase; font-size: 0.9rem; letter-spacing: 0.5px; }
+        .controls { background: #f8f9fa; padding: 25px; border-radius: 15px; margin-bottom: 30px; border: 1px solid #e9ecef; }
+        .controls h3 { margin-bottom: 20px; color: #2c3e50; font-size: 1.3rem; }
+        .control-buttons { margin-bottom: 20px; }
+        .btn { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; margin-right: 10px; font-weight: 500; transition: background 0.3s ease; }
+        .btn:hover { background: #0056b3; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #545b62; }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-warning:hover { background: #e0a800; }
+        .btn-small { padding: 5px 10px; font-size: 0.8rem; }
+        .project-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .project-filter { display: flex; align-items: center; padding: 12px; background: white; border-radius: 8px; border: 1px solid #dee2e6; transition: border-color 0.3s ease; }
+        .project-filter:hover { border-color: #007bff; }
+        .project-filter input { margin-right: 10px; transform: scale(1.2); }
+        .project-filter label { cursor: pointer; font-weight: 500; color: #495057; }
+        .chart-container { background: white; border-radius: 15px; padding: 20px; margin-bottom: 30px; border: 1px solid #e9ecef; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .data-table-container { background: white; border-radius: 15px; padding: 20px; border: 1px solid #e9ecef; box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+        .table-wrapper { overflow-x: auto; max-height: 600px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
+        th { background: #f8f9fa; font-weight: 600; color: #495057; position: sticky; top: 0; z-index: 10; }
+        tr:hover { background: #f8f9fa; }
+        .loading { text-align: center; padding: 40px; color: #6c757d; font-size: 1.1rem; }
+        .error { color: #dc3545; background: #f8d7da; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        .success { color: #155724; background: #d4edda; padding: 15px; border-radius: 8px; margin: 20px 0; }
+        .summary-info { background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196f3; }
+        .summary-info strong { color: #1976d2; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 20px; border: none; width: 90%; max-width: 500px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); }
+        .close { color: #aaa; float: right; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .close:hover, .close:focus { color: #000; text-decoration: none; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 500; color: #495057; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #dee2e6; border-radius: 8px; font-size: 14px; transition: border-color 0.3s ease; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,0.25); }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .action-buttons { display: flex; gap: 5px; }
+        .table-actions { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .table-actions h3 { margin: 0; }
+        @media (max-width: 768px) { .action-buttons { flex-direction: column; } .btn-small { margin-bottom: 5px; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Juan Gastos Dashboard</h1>
+            <p>Expense Management System</p>
+        </div>
+        <div class="content">
+            <div class="stats" id="stats"><div class="loading">Loading statistics...</div></div>
+            <div class="controls">
+                <h3>Select Projects to Display:</h3>
+                <div class="control-buttons">
+                    <button class="btn" onclick="selectAllProjects()">Select All</button>
+                    <button class="btn btn-secondary" onclick="deselectAllProjects()">Deselect All</button>
+                </div>
+                <div class="project-filters" id="projectFilters"><div class="loading">Loading projects...</div></div>
+            </div>
+            <div class="chart-container"><div id="chart"><div class="loading">Loading chart...</div></div></div>
+            <div class="data-table-container">
+                <div class="table-actions">
+                    <h3>Project Records</h3>
+                    <button class="btn btn-success" onclick="openCreateModal()">Add New Record</button>
+                </div>
+                <div id="summaryInfo" class="summary-info" style="display: none;"></div>
+                <div class="table-wrapper">
+                    <table id="dataTable">
+                        <thead><tr><th>ID</th><th>Project</th><th>Date</th><th>Description</th><th>Amount</th><th>Actions</th></tr></thead>
+                        <tbody id="dataTableBody"><tr><td colspan="6" class="loading">Loading data...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="recordModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h2 id="modalTitle">Add New Record</h2>
+            <form id="recordForm">
+                <div class="form-group"><label for="proyecto">Project Name *</label><input type="text" id="proyecto" name="proyecto" required maxlength="20"></div>
+                <div class="form-group"><label for="fecha">Date *</label><input type="date" id="fecha" name="fecha" required></div>
+                <div class="form-group"><label for="monto">Amount *</label><input type="number" id="monto" name="monto" step="0.01" required></div>
+                <div class="form-group"><label for="descripcion">Description</label><textarea id="descripcion" name="descripcion" placeholder="Optional description..."></textarea></div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                    <button type="submit" class="btn btn-success" id="submitBtn">Save Record</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeDeleteModal()">&times;</span>
+            <h2>Confirm Delete</h2>
+            <p>Are you sure you want to delete this record? This action cannot be undone.</p>
+            <div id="deleteRecordInfo" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;"></div>
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="closeDeleteModal()">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteBtn" onclick="confirmDelete()">Delete Record</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        let allData=[];let projects=[];let monthlyAggregatedData=[];let editingId=null;let deleteId=null;
+        function showLoading(m,e){const el=document.getElementById(e);if(el)el.innerHTML=`<div class="loading">${m}</div>`;}
+        function showError(m,e){const el=document.getElementById(e);if(el)el.innerHTML=`<div class="error">Error: ${m}</div>`;}
+        function showSuccess(m){const d=document.createElement('div');d.className='success';d.textContent=m;d.style.position='fixed';d.style.top='20px';d.style.right='20px';d.style.zIndex='1001';d.style.maxWidth='300px';document.body.appendChild(d);setTimeout(()=>{if(d.parentNode)d.parentNode.removeChild(d);},3000);}
+        async function loadData(){try{showLoading('Loading...','stats');showLoading('Loading...','chart');showLoading('Loading...','projectFilters');showLoading('Loading...','dataTableBody');const r=await fetch('/api/gastos');if(!r.ok)throw new Error(`HTTP error! status: ${r.status}`);const d=await r.json();allData=d;projects=[...new Set(d.map(i=>i.proyecto))].sort();createMonthlyAggregatedData();createProjectFilters();updateStats();updateChart();updateDataTable();}catch(e){console.error('Error:',e);showError('Could not load data. Check backend service.','chart');showError('Could not load data.','stats');showError('Could not load data.','projectFilters');showError('Could not load data.','dataTableBody');}}
+        function createMonthlyAggregatedData(){const m=new Map();allData.forEach(i=>{if(!i.fecha||typeof i.monto!=='number')return;const d=new Date(i.fecha);const mk=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;const k=`${i.proyecto}_${mk}`;if(!m.has(k))m.set(k,{proyecto:i.proyecto,month:mk,monthDisplay:d.toLocaleDateString('en-US',{year:'numeric',month:'long'}),count:0,totalAmount:0});const md=m.get(k);md.count++;md.totalAmount+=i.monto;});monthlyAggregatedData=Array.from(m.values()).map(i=>({...i,avgAmount:i.count>0?i.totalAmount/i.count:0}));monthlyAggregatedData.sort((a,b)=>{if(a.proyecto!==b.proyecto)return a.proyecto.localeCompare(b.proyecto);return a.month.localeCompare(b.month);});}
+        function createProjectFilters(){const c=document.getElementById('projectFilters');c.innerHTML='';if(projects.length===0){c.innerHTML='<div class="loading">No projects found</div>';return;}projects.forEach(p=>{const d=document.createElement('div');d.className='project-filter';const cb=document.createElement('input');cb.type='checkbox';cb.id=`project_${p.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'')}`;cb.checked=true;cb.addEventListener('change',()=>{updateChart();updateDataTable();});const l=document.createElement('label');l.htmlFor=cb.id;l.textContent=p;d.appendChild(cb);d.appendChild(l);c.appendChild(d);});}
+        function getSelectedProjects(){return projects.filter(p=>{const cb=document.getElementById(`project_${p.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'')}`);return cb&&cb.checked;});}
+        function updateStats(){const tp=projects.length;const tr=allData.length;const ta=allData.reduce((s,i)=>s+(i.monto||0),0);const aa=tr>0?ta/tr:0;document.getElementById('stats').innerHTML=`<div class="stat-card"><div class="stat-value">${tp}</div><div class="stat-label">Projects</div></div><div class="stat-card"><div class="stat-value">${tr}</div><div class="stat-label">Records</div></div><div class="stat-card"><div class="stat-value">${ta.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}</div><div class="stat-label">Total Amount</div></div><div class="stat-card"><div class="stat-value">${aa.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}</div><div class="stat-label">Average</div></div>`;}
+        function updateChart(){const sp=getSelectedProjects();const cd=document.getElementById('chart');if(sp.length===0){cd.innerHTML='<div class="loading">Select at least one project</div>';return;}const fd=monthlyAggregatedData.filter(i=>sp.includes(i.proyecto));if(fd.length===0){cd.innerHTML='<div class="loading">No data found</div>';return;}const t=[];const c=['#1f77b4','#ff7f0e','#2ca02c','#d62728','#9467bd','#8c564b','#e377c2','#7f7f7f','#bcbd22','#17becf'];sp.forEach((p,i)=>{const pd=fd.filter(x=>x.proyecto===p).sort((a,b)=>a.month.localeCompare(b.month));if(pd.length>0)t.push({x:pd.map(x=>x.month+'-01'),y:pd.map(x=>x.totalAmount),name:p,type:'scatter',mode:'lines+markers',marker:{color:c[i%c.length],size:8,line:{color:'white',width:1.5}},line:{width:3,shape:'spline'},hovertemplate:'<b>%{fullData.name}</b><br>Month: %{x|%B %Y}<br>Total: $%{y:,.2f}<br><extra></extra>'});});if(t.length===0){cd.innerHTML='<div class="loading">No data points</div>';return;}Plotly.newPlot(cd,t,{title:{text:'Monthly Project Expenses',font:{size:22,color:'#2c3e50'},x:0.05},xaxis:{title:{text:'Month',font:{size:14,color:'#666'}},type:'date',gridcolor:'#e0e0e0',tickfont:{color:'#666'},tickformat:'%b %Y',rangeselector:{buttons:[{count:1,label:'1m',step:'month',stepmode:'backward'},{count:6,label:'6m',step:'month',stepmode:'backward'},{step:'all'}]},rangeslider:{visible:true}},yaxis:{title:{text:'Amount ($)',font:{size:14,color:'#666'}},tickformat:'$,.0f',gridcolor:'#e0e0e0',tickfont:{color:'#666'}},hovermode:'x unified',showlegend:true,legend:{x:1,xanchor:'right',y:1,bgcolor:'rgba(255,255,255,0.9)',bordercolor:'#ddd',borderwidth:1,orientation:'h'},margin:{l:80,r:50,t:100,b:80},plot_bgcolor:'white',paper_bgcolor:'white',height:500},{responsive:true,displayModeBar:true,modeBarButtonsToRemove:['lasso2d','select2d'],displaylogo:false});}
+        function updateDataTable(){const sp=getSelectedProjects();const fd=allData.filter(i=>sp.length===0||sp.includes(i.proyecto));const tb=document.getElementById('dataTableBody');const si=document.getElementById('summaryInfo');if(fd.length===0){tb.innerHTML='<tr><td colspan="6" class="loading">No records found</td></tr>';si.style.display='none';return;}const ta=fd.reduce((s,i)=>s+i.monto,0);si.innerHTML=`<strong>Summary:</strong> ${fd.length} record(s) across ${sp.length} project(s), total <strong>${ta.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</strong>`;si.style.display='block';const sd=[...fd].sort((a,b)=>new Date(b.fecha)-new Date(a.fecha));tb.innerHTML=sd.map(i=>`<tr><td><strong>${i.id}</strong></td><td><strong>${i.proyecto}</strong></td><td>${new Date(i.fecha).toLocaleDateString()}</td><td>${i.descripcion||'-'}</td><td>${i.monto.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</td><td><div class="action-buttons"><button class="btn btn-warning btn-small" onclick="openEditModal(${i.id})">Edit</button><button class="btn btn-danger btn-small" onclick="openDeleteModal(${i.id})">Delete</button></div></td></tr>`).join('');}
+        function openCreateModal(){editingId=null;document.getElementById('modalTitle').textContent='Add New Record';document.getElementById('submitBtn').textContent='Save Record';document.getElementById('recordForm').reset();document.getElementById('fecha').valueAsDate=new Date();document.getElementById('recordModal').style.display='block';}
+        function openEditModal(id){const r=allData.find(i=>i.id===id);if(!r){alert('Record not found!');return;}editingId=id;document.getElementById('modalTitle').textContent='Edit Record';document.getElementById('submitBtn').textContent='Update Record';document.getElementById('proyecto').value=r.proyecto;document.getElementById('fecha').value=r.fecha.split('T')[0];document.getElementById('monto').value=r.monto;document.getElementById('descripcion').value=r.descripcion||'';document.getElementById('recordModal').style.display='block';}
+        function closeModal(){document.getElementById('recordModal').style.display='none';editingId=null;}
+        function openDeleteModal(id){const r=allData.find(i=>i.id===id);if(!r){alert('Record not found!');return;}deleteId=id;document.getElementById('deleteRecordInfo').innerHTML=`<strong>Project:</strong> ${r.proyecto}<br><strong>Date:</strong> ${new Date(r.fecha).toLocaleDateString()}<br><strong>Amount:</strong> ${r.monto.toLocaleString()}<br><strong>Description:</strong> ${r.descripcion||'No description'}`;document.getElementById('deleteModal').style.display='block';}
+        function closeDeleteModal(){document.getElementById('deleteModal').style.display='none';deleteId=null;}
+        async function confirmDelete(){if(!deleteId)return;try{document.getElementById('confirmDeleteBtn').disabled=true;document.getElementById('confirmDeleteBtn').textContent='Deleting...';await fetch(`/api/gastos/${deleteId}`,{method:'DELETE'});showSuccess('Record deleted successfully!');closeDeleteModal();loadData();}catch(e){alert('Error: '+e.message);}finally{document.getElementById('confirmDeleteBtn').disabled=false;document.getElementById('confirmDeleteBtn').textContent='Delete Record';}}
+        function selectAllProjects(){projects.forEach(p=>{const cb=document.getElementById(`project_${p.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'')}`);if(cb)cb.checked=true;});updateChart();updateDataTable();}
+        function deselectAllProjects(){projects.forEach(p=>{const cb=document.getElementById(`project_${p.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'')}`);if(cb)cb.checked=false;});updateChart();updateDataTable();}
+        document.getElementById('recordForm').addEventListener('submit',async function(e){e.preventDefault();const fd=new FormData(e.target);const d={proyecto:fd.get('proyecto').trim(),fecha:fd.get('fecha'),monto:parseFloat(fd.get('monto')),descripcion:fd.get('descripcion').trim()||null};if(!d.proyecto||!d.fecha||isNaN(d.monto)){alert('Please fill all required fields.');return;}try{document.getElementById('submitBtn').disabled=true;document.getElementById('submitBtn').textContent=editingId?'Updating...':'Saving...';if(editingId){await fetch(`/api/gastos/${editingId}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});showSuccess('Record updated!');}else{await fetch('/api/gastos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)});showSuccess('Record created!');}closeModal();loadData();}catch(e){alert('Error: '+e.message);}finally{document.getElementById('submitBtn').disabled=false;document.getElementById('submitBtn').textContent=editingId?'Update Record':'Save Record';}});
+        document.addEventListener('DOMContentLoaded',function(){loadData();document.addEventListener('keydown',function(e){if(e.ctrlKey&&e.key==='a'){e.preventDefault();selectAllProjects();}else if(e.ctrlKey&&e.key==='d'){e.preventDefault();deselectAllProjects();}else if(e.key==='Escape'){closeModal();closeDeleteModal();}});window.addEventListener('click',function(e){const rm=document.getElementById('recordModal');const dm=document.getElementById('deleteModal');if(e.target===rm)closeModal();if(e.target===dm)closeDeleteModal();});});
+    </script>
+</body>
+</html>
